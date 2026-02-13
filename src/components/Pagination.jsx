@@ -9,7 +9,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   return (
     <div
       className="flex justify-center mt-4 
-  flex-wrap gap-1"
+  flex-wrap gap-1 px-8"
     >
       <button
         className="btn"

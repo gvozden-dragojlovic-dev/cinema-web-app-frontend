@@ -15,6 +15,7 @@ function App() {
   const [initialized, setInitialized] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(1);
+  const [favoritesPage, setFavoritesPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -22,6 +23,13 @@ function App() {
   const [view, setView] = useState("home");
 
   const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
+
+  const itemsPerPage = 20;
+  const totalFavoritesPages = Math.ceil(favorites.length / itemsPerPage);
+  const paginatedFavorites = favorites.slice(
+    (favoritesPage - 1) * itemsPerPage,
+    favoritesPage * itemsPerPage
+  );
 
   useEffect(() => {
     const storedFavorites = JSON.parse(localStorage.getItem("favorites")) || [];
@@ -34,6 +42,18 @@ function App() {
       localStorage.setItem("favorites", JSON.stringify(favorites));
     }
   }, [favorites, initialized]);
+
+  useEffect(() => {
+    if (view === "favorites") {
+      setFavoritesPage(1);
+    }
+  }, [view]);
+
+  useEffect(() => {
+    if (view === "favorites" && favoritesPage > totalFavoritesPages && totalFavoritesPages > 0) {
+      setFavoritesPage(totalFavoritesPages);
+    }
+  }, [favorites, view, favoritesPage, totalFavoritesPages]);
 
   useEffect(() => {
     if (view === "favorites" || view === "home") {
@@ -123,7 +143,7 @@ function App() {
 
   const isFavorite = (movieId) => favorites.some((fav) => fav.id === movieId);
 
-  const displayMovies = view === "favorites" ? favorites : movies;
+  const displayMovies = view === "favorites" ? paginatedFavorites : movies;
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -135,7 +155,7 @@ function App() {
         setPage={setPage}
       />
       <main
-        className="grow w-full flex flex-col items-center text-center pb-8"
+        className="grow w-full flex flex-col items-center text-center"
         style={{
           backgroundImage: `url(${backgroundMain})`,
           backgroundSize: "cover",
@@ -179,11 +199,21 @@ function App() {
             )}
 
             {view !== "favorites" && totalPages > 1 && !loading && !error && (
-              <div className="mt-6">
+              <div className="mt-6 px-8 pb-8">
                 <Pagination
                   currentPage={page}
                   totalPages={totalPages}
                   onPageChange={handlePageChange}
+                />
+              </div>
+            )}
+
+            {view === "favorites" && totalFavoritesPages > 1 && displayMovies.length > 0 && (
+              <div className="mt-6 px-8 pb-8">
+                <Pagination
+                  currentPage={favoritesPage}
+                  totalPages={totalFavoritesPages}
+                  onPageChange={setFavoritesPage}
                 />
               </div>
             )}
