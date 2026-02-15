@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-4 gap-8">
           <div>
-            <h3 className="text-2xl font-bold mb-4">CiderssCinema</h3>
+            <h3 className="text-2xl font-bold mb-4"><span className="text-purple-500">Ciderss</span>Cinema</h3>
             <p className="text-sm mb-4">
               Discover everything you need for an amazing movie experience. Watch your favorite films and explore timeless classics.
             </p>

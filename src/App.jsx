@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import SearchBar from "./components/SearchBar";
 import Spinner from "./components/Spinner";
 import ErrorMessage from "./components/ErrorMessage";
@@ -7,9 +8,14 @@ import MovieDetailsModal from "./components/MovieDetailsModal";
 import Pagination from "./components/Pagination";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import Login from "./components/Login";
+import Register from "./components/Register";
 import backgroundMain from "./assets/background-main.png";
+import cinemaLogin from "./assets/cinema_login_3.webp";
 
-function App() {
+function AppContent() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [movies, setMovies] = useState([]);
   const [favorites, setFavorites] = useState([]);
   const [initialized, setInitialized] = useState(false);
@@ -20,7 +26,10 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedMovie, setSelectedMovie] = useState(null);
-  const [view, setView] = useState("home");
+  const [view, setView] = useState(() => {
+    const pathView = location.pathname.replace("/", "") || "home";
+    return ["home", "popular", "trending", "toprated", "favorites", "login", "register"].includes(pathView) ? pathView : "home";
+  });
 
   const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
@@ -44,6 +53,24 @@ function App() {
   }, [favorites, initialized]);
 
   useEffect(() => {
+    const pathView = location.pathname.replace("/", "") || "home";
+    if (["home", "popular", "trending", "toprated", "favorites", "login", "register"].includes(pathView)) {
+      setView(pathView);
+    }
+  }, [location.pathname, initialized]);
+
+  useEffect(() => {
+    const isAuthView = view === "login" || view === "register";
+    if (isAuthView) {
+      navigate(`/${view}`);
+    } else if (view === "home") {
+      navigate("/");
+    } else {
+      navigate(`/${view}`);
+    }
+  }, [view, navigate]);
+
+  useEffect(() => {
     if (view === "favorites") {
       setFavoritesPage(1);
     }
@@ -54,6 +81,10 @@ function App() {
       setFavoritesPage(totalFavoritesPages);
     }
   }, [favorites, view, favoritesPage, totalFavoritesPages]);
+
+  useEffect(() => {
+    setError(null);
+  }, [view]);
 
   useEffect(() => {
     if (view === "favorites" || view === "home") {
@@ -91,7 +122,7 @@ function App() {
       }
     };
     fetchMovies();
-  }, [searchTerm, page, view]);
+  }, [searchTerm, page, view, API_KEY]);
 
   const handleSearch = (term) => {
     setSearchTerm(term);
@@ -157,19 +188,34 @@ function App() {
       <main
         className="grow w-full flex flex-col items-center text-center"
         style={{
-          backgroundImage: `url(${backgroundMain})`,
+          backgroundImage:
+            view === "login" || view === "register"
+              ? `url(${cinemaLogin})`
+              : `url(${backgroundMain})`,
           backgroundSize: "cover",
           backgroundPosition: "center",
           backgroundAttachment: "fixed",
         }}
       >
+        {view === "login" && (
+          <div className="w-full flex items-center justify-center px-4">
+            <Login />
+          </div>
+        )}
+
+        {view === "register" && (
+          <div className="w-full flex items-center justify-center px-4 py-8">
+            <Register />
+          </div>
+        )}
+
         {view === "home" && (
           <h1 className="text-4xl font-extrabold mb-6 drop-shadow-2xl mt-8 text-white" style={{ fontFamily: "'Space Mono', monospace" }}>
             Find <span className="text-purple-500">Movies</span> You'll Enjoy
             Without The Hastle
           </h1>
         )}
-        {view !== "home" && (
+        {view !== "login" && view !== "register" && view !== "home" && (
           <div className="w-full px-4 pt-8">
             <div className="w-full max-w-md mb-6 mx-auto">
               <SearchBar onSearch={handleSearch} />
@@ -234,4 +280,18 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<AppContent />} />
+        <Route path="/popular" element={<AppContent />} />
+        <Route path="/trending" element={<AppContent />} />
+        <Route path="/toprated" element={<AppContent />} />
+        <Route path="/favorites" element={<AppContent />} />
+        <Route path="/login" element={<AppContent />} />
+        <Route path="/register" element={<AppContent />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}

@@ -90,10 +90,16 @@ export default function Header({
         </div>
 
         <div className="flex gap-3">
-          <button className="btn btn-outline btn-sm text-white border-white hover:bg-white hover:text-gray-900">
+          <button
+            onClick={() => setView("login")}
+            className="btn btn-outline btn-sm text-white border-white hover:bg-white hover:text-gray-900"
+          >
             Login
           </button>
-          <button className="btn btn-sm bg-purple-500 hover:bg-purple-600 border-none text-white">
+          <button
+            onClick={() => setView("register")}
+            className="btn btn-sm bg-purple-500 hover:bg-purple-600 border-none text-white"
+          >
             Registration
           </button>
         </div>
