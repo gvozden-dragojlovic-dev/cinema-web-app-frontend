@@ -83,17 +83,21 @@ function AppContent() {
   }, [favorites, view, favoritesPage, totalFavoritesPages]);
 
   useEffect(() => {
-    setError(null);
-  }, [view]);
-
-  useEffect(() => {
-    if (view === "favorites" || view === "home") {
+    if (view === "favorites" || view === "home" || view === "login" || view === "register") {
       setMovies([]);
+      setError(null);
+      setLoading(false);
       return;
     }
+
+    const abortController = new AbortController();
+    let isMounted = true;
+
     const fetchMovies = async () => {
       setLoading(true);
       setError(null);
+      setMovies([]);
+
       try {
         let url;
         if (searchTerm) {
@@ -107,21 +111,33 @@ function AppContent() {
         } else if (view === "toprated") {
           url = `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`;
         }
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: abortController.signal });
         if (!response.ok) {
           throw new Error("Failed to fetch movies.");
         }
         const data = await response.json();
-        console.log(data);
-        setMovies(data.results);
-        setTotalPages(Math.min(data.total_pages || 0, 500));
-      } catch {
-        setError("Failed to fetch movies.");
+        if (isMounted) {
+          console.log(data);
+          setMovies(data.results);
+          setTotalPages(Math.min(data.total_pages || 0, 500));
+        }
+      } catch (err) {
+        if (isMounted && err.name !== "AbortError") {
+          setError("Failed to fetch movies.");
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
+
     fetchMovies();
+
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, [searchTerm, page, view, API_KEY]);
 
   const handleSearch = (term) => {
