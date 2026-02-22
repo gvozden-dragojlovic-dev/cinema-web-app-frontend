@@ -6,6 +6,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState("");
+  const [serverMessage, setServerMessage] = useState("");
   const navigate = useNavigate();
 
   const validateEmail = (value) => {
@@ -34,10 +35,39 @@ export default function Login() {
 
   const isEmailValid = email && !emailError && email.includes("@gmail.com");
 
+  const handleLogin = async () => {
+    if (!isEmailValid || !password) return;
+
+    try {
+      const response = await fetch("http://localhost:8080/api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username: email,
+          password: password
+        })
+      });
+
+      const result = await response.text();
+      setServerMessage(result);
+
+      if (result === "Login successful") {
+        navigate("/");
+      }
+    } catch (error) {
+      setServerMessage("Server error");
+    }
+  };
+
   return (
     <div className="flex items-center justify-center w-full px-4">
       <div className="p-12 max-w-xl w-full">
-        <h2 className="text-5xl font-extrabold mb-8 text-white italic" style={{ fontFamily: "'Space Mono', monospace" }}>
+        <h2
+          className="text-5xl font-extrabold mb-8 text-white italic"
+          style={{ fontFamily: "'Space Mono', monospace" }}
+        >
           <span className="text-purple-500">Ciderss</span>Cinema
         </h2>
 
@@ -79,10 +109,17 @@ export default function Login() {
           </div>
         </div>
 
+        {serverMessage && (
+          <p className={`mb-4 text-base ${serverMessage === "Login successful" ? "text-green-500" : "text-red-500"}`}>
+            {serverMessage}
+          </p>
+        )}
+
         <button
-          disabled={!isEmailValid}
+          onClick={handleLogin}
+          disabled={!isEmailValid || !password}
           className={`w-full py-3 rounded-lg font-semibold text-base transition ${
-            isEmailValid
+            isEmailValid && password
               ? "bg-purple-600 text-white hover:bg-purple-700 cursor-pointer"
               : "bg-gray-600 text-gray-400 cursor-not-allowed"
           }`}
@@ -91,7 +128,9 @@ export default function Login() {
         </button>
 
         <div className="mt-8 text-center">
-          <span className="text-gray-400 text-base">Not a member of CiderssCinema group? </span>
+          <span className="text-gray-400 text-base">
+            Not a member of CiderssCinema group?
+          </span>
           <button
             onClick={() => navigate("/register")}
             className="text-purple-500 hover:text-purple-400 font-semibold text-base cursor-pointer"
