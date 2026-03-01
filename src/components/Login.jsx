@@ -50,12 +50,23 @@ export default function Login({ onLoginSuccess }) {
         })
       });
 
-      const result = await response.text();
-      setServerMessage(result);
-
-      if (result === "Login successful") {
-        onLoginSuccess(email);
+      if (!response.ok) {
+        const errorText = await response.text();
+        setServerMessage(errorText);
+        return;
       }
+
+      const data = await response.json();
+
+      localStorage.setItem("adminId", data.id);
+      localStorage.setItem("adminEmail", data.email);
+
+      setServerMessage("Login successful");
+
+      if (onLoginSuccess) {
+        onLoginSuccess(data.email);
+      }
+
     } catch (error) {
       setServerMessage("Server error");
     }

@@ -1,7 +1,11 @@
 import React from "react";
 
-const SearchBar = ({ onSearch }) => {
-  const [term, setTerm] = React.useState("");
+const SearchBar = ({ onSearch, searchTerm }) => {
+  const [term, setTerm] = React.useState(searchTerm || "");
+
+  React.useEffect(() => {
+    setTerm(searchTerm || "");
+  }, [searchTerm]);
 
   const handleSubmit = (e) => {
     e.preventDefault();

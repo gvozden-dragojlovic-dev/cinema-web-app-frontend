@@ -10,6 +10,8 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Login from "./components/Login";
 import Register from "./components/Register";
+import Account from "./components/Account";
+import ChangePassword from "./components/ChangePassword";
 import backgroundMain from "./assets/background-main.png";
 import cinemaLogin from "./assets/cinema_login_3.webp";
 
@@ -34,14 +36,17 @@ function AppContent() {
   });
   const [view, setView] = useState(() => {
     const pathView = location.pathname.replace("/", "") || "home";
-    return ["home", "popular", "trending", "toprated", "favorites", "login", "register"].includes(pathView) ? pathView : "home";
+    return ["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password"].includes(pathView) ? pathView : "home";
   });
 
   const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
 
   const itemsPerPage = 20;
-  const totalFavoritesPages = Math.ceil(favorites.length / itemsPerPage);
-  const paginatedFavorites = favorites.slice(
+  const filteredFavorites = favorites.filter((movie) =>
+    searchTerm ? movie.title.toLowerCase().includes(searchTerm.toLowerCase()) : true
+  );
+  const totalFavoritesPages = Math.ceil(filteredFavorites.length / itemsPerPage);
+  const paginatedFavorites = filteredFavorites.slice(
     (favoritesPage - 1) * itemsPerPage,
     favoritesPage * itemsPerPage
   );
@@ -65,13 +70,15 @@ function AppContent() {
       return;
     }
     const pathView = path.replace("/", "");
-    if (["home", "popular", "trending", "toprated", "favorites", "login", "register"].includes(pathView)) {
+    if (["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password"].includes(pathView)) {
       setView(pathView);
     }
   }, [location.pathname, navigate]);
 
   const handleViewChange = (newView) => {
     setView(newView);
+    setSearchTerm("");
+    setPage(1);
     navigate(`/${newView}`);
   };
 
@@ -85,7 +92,7 @@ function AppContent() {
     if (view === "favorites" && favoritesPage > totalFavoritesPages && totalFavoritesPages > 0) {
       setFavoritesPage(totalFavoritesPages);
     }
-  }, [favorites, view, favoritesPage, totalFavoritesPages]);
+  }, [favorites, view, favoritesPage, totalFavoritesPages, searchTerm]);
 
   useEffect(() => {
     if (view === "favorites" || view === "home" || view === "login" || view === "register") {
@@ -111,8 +118,11 @@ function AppContent() {
           )}&page=${page}`;
         } else if (view === "popular") {
           url = `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&page=${page}`;
-        } else if (view === "trending") {
-          url = `https://api.themoviedb.org/3/trending/movie/week?api_key=${API_KEY}&page=${page}`;
+        } else if (view === "coming-soon") {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          const tomorrowStr = tomorrow.toISOString().split('T')[0];
+          url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&primary_release_date.gte=${tomorrowStr}&sort_by=primary_release_date.asc&page=${page}`;
         } else if (view === "toprated") {
           url = `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`;
         }
@@ -148,6 +158,7 @@ function AppContent() {
   const handleSearch = (term) => {
     setSearchTerm(term);
     setPage(1);
+    setFavoritesPage(1);
   };
 
   const handlePageChange = (newPage) => {
@@ -231,7 +242,7 @@ function AppContent() {
         className="grow w-full flex flex-col items-center text-center"
         style={{
           backgroundImage:
-            view === "login" || view === "register"
+            view === "login" || view === "register" || view === "account" || view === "change-password"
               ? `url(${cinemaLogin})`
               : `url(${backgroundMain})`,
           backgroundSize: "cover",
@@ -251,16 +262,28 @@ function AppContent() {
           </div>
         )}
 
+        {view === "account" && (
+          <div className="w-full flex items-center justify-center px-4 py-8">
+            <Account userEmail={userEmail} />
+          </div>
+        )}
+
+        {view === "change-password" && (
+          <div className="w-full flex items-center justify-center px-4 py-8">
+            <ChangePassword />
+          </div>
+        )}
+
         {view === "home" && (
           <h1 className="text-4xl font-extrabold mb-6 drop-shadow-2xl mt-8 text-white" style={{ fontFamily: "'Space Mono', monospace" }}>
             Find <span className="text-purple-500">Movies</span> You'll Enjoy
             Without The Hastle
           </h1>
         )}
-        {view !== "login" && view !== "register" && view !== "home" && (
+        {view !== "login" && view !== "register" && view !== "home" && view !== "account" && view !== "change-password" && (
           <div className="w-full px-4 pt-8">
             <div className="w-full max-w-md mb-6 mx-auto">
-              <SearchBar onSearch={handleSearch} />
+              <SearchBar onSearch={handleSearch} searchTerm={searchTerm} />
             </div>
             {loading && <Spinner />}
             {error && <ErrorMessage message={error} />}
@@ -329,11 +352,13 @@ export default function App() {
         <Route path="/" element={<AppContent />} />
         <Route path="/home" element={<AppContent />} />
         <Route path="/popular" element={<AppContent />} />
-        <Route path="/trending" element={<AppContent />} />
+        <Route path="/coming-soon" element={<AppContent />} />
         <Route path="/toprated" element={<AppContent />} />
         <Route path="/favorites" element={<AppContent />} />
         <Route path="/login" element={<AppContent />} />
         <Route path="/register" element={<AppContent />} />
+        <Route path="/account" element={<AppContent />} />
+        <Route path="/change-password" element={<AppContent />} />
       </Routes>
     </BrowserRouter>
   );

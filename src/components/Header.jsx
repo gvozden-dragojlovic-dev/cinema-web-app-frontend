@@ -73,13 +73,13 @@ export default function Header({
             </a>
             <a
               className={`tab font-semibold transition-colors rounded-lg px-4 py-2 ${
-                view === "trending"
+                view === "coming-soon"
                   ? "bg-gray-700 text-white"
                   : "text-gray-300 hover:text-white"
               }`}
-              onClick={() => handleNavClick("trending")}
+              onClick={() => handleNavClick("coming-soon")}
             >
-              Trending
+              Coming Soon
             </a>
             <a
               className={`tab font-semibold transition-colors rounded-lg px-4 py-2 ${
@@ -132,7 +132,7 @@ export default function Header({
                     <button
                       onClick={() => {
                         setShowUserMenu(false);
-                        setView("buyticket");
+                        setView("buy-ticket");
                       }}
                       className="w-full text-left px-4 py-2 text-gray-300 hover:bg-gray-700 hover:text-white transition cursor-pointer"
                     >
