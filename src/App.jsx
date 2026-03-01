@@ -26,6 +26,12 @@ function AppContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedMovie, setSelectedMovie] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem("isLoggedIn") === "true";
+  });
+  const [userEmail, setUserEmail] = useState(() => {
+    return localStorage.getItem("userEmail") || "";
+  });
   const [view, setView] = useState(() => {
     const pathView = location.pathname.replace("/", "") || "home";
     return ["home", "popular", "trending", "toprated", "favorites", "login", "register"].includes(pathView) ? pathView : "home";
@@ -53,22 +59,21 @@ function AppContent() {
   }, [favorites, initialized]);
 
   useEffect(() => {
-    const pathView = location.pathname.replace("/", "") || "home";
+    const path = location.pathname;
+    if (path === "/") {
+      navigate("/home", { replace: true });
+      return;
+    }
+    const pathView = path.replace("/", "");
     if (["home", "popular", "trending", "toprated", "favorites", "login", "register"].includes(pathView)) {
       setView(pathView);
     }
-  }, [location.pathname, initialized]);
+  }, [location.pathname, navigate]);
 
-  useEffect(() => {
-    const isAuthView = view === "login" || view === "register";
-    if (isAuthView) {
-      navigate(`/${view}`);
-    } else if (view === "home") {
-      navigate("/");
-    } else {
-      navigate(`/${view}`);
-    }
-  }, [view, navigate]);
+  const handleViewChange = (newView) => {
+    setView(newView);
+    navigate(`/${newView}`);
+  };
 
   useEffect(() => {
     if (view === "favorites") {
@@ -192,14 +197,35 @@ function AppContent() {
 
   const displayMovies = view === "favorites" ? paginatedFavorites : movies;
 
+  const handleLoginSuccess = (email) => {
+    setIsLoggedIn(true);
+    setUserEmail(email);
+    localStorage.setItem("isLoggedIn", "true");
+    localStorage.setItem("userEmail", email);
+    setView("home");
+    navigate("/home");
+  };
+
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setUserEmail("");
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("userEmail");
+    setView("home");
+    navigate("/home");
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Header
         view={view}
-        setView={setView}
+        setView={handleViewChange}
         favorites={favorites}
         page={page}
         setPage={setPage}
+        isLoggedIn={isLoggedIn}
+        userEmail={userEmail}
+        onLogout={handleLogout}
       />
       <main
         className="grow w-full flex flex-col items-center text-center"
@@ -215,7 +241,7 @@ function AppContent() {
       >
         {view === "login" && (
           <div className="w-full flex items-center justify-center px-4">
-            <Login />
+            <Login onLoginSuccess={handleLoginSuccess} />
           </div>
         )}
 
@@ -301,6 +327,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<AppContent />} />
+        <Route path="/home" element={<AppContent />} />
         <Route path="/popular" element={<AppContent />} />
         <Route path="/trending" element={<AppContent />} />
         <Route path="/toprated" element={<AppContent />} />
