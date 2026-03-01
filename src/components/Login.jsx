@@ -39,7 +39,7 @@ export default function Login() {
     if (!isEmailValid || !password) return;
 
     try {
-      const response = await fetch("http://localhost:8080/api/login", {
+      const response = await fetch("http://localhost:8080/api/customers/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -129,8 +129,7 @@ export default function Login() {
 
         <div className="mt-8 text-center">
           <span className="text-gray-400 text-base">
-            Not a member of CiderssCinema group?
-          </span>
+            Not a member of CiderssCinema group? </span>
           <button
             onClick={() => navigate("/register")}
             className="text-purple-500 hover:text-purple-400 font-semibold text-base cursor-pointer"
