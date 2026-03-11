@@ -12,8 +12,9 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import Account from "./components/Account";
 import ChangePassword from "./components/ChangePassword";
+import Home from "./components/Home";
 import backgroundMain from "./assets/background-main.png";
-import cinemaLogin from "./assets/cinema_login_3.webp";
+import cinemaLogin from "./assets/cinema_login_3.png";
 
 function AppContent() {
   const location = useLocation();
@@ -122,7 +123,10 @@ function AppContent() {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
           const tomorrowStr = tomorrow.toISOString().split('T')[0];
-          url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&primary_release_date.gte=${tomorrowStr}&sort_by=primary_release_date.asc&page=${page}`;
+          const maxDate = new Date();
+          maxDate.setDate(maxDate.getDate() + 30);
+          const maxDateStr = maxDate.toISOString().split('T')[0];
+          url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&primary_release_date.gte=${tomorrowStr}&primary_release_date.lte=${maxDateStr}&sort_by=primary_release_date.asc&page=${page}`;
         } else if (view === "toprated") {
           url = `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`;
         }
@@ -274,12 +278,7 @@ function AppContent() {
           </div>
         )}
 
-        {view === "home" && (
-          <h1 className="text-4xl font-extrabold mb-6 drop-shadow-2xl mt-8 text-white" style={{ fontFamily: "'Space Mono', monospace" }}>
-            Find <span className="text-purple-500">Movies</span> You'll Enjoy
-            Without The Hastle
-          </h1>
-        )}
+        {view === "home" && <Home />}
         {view !== "login" && view !== "register" && view !== "home" && view !== "account" && view !== "change-password" && (
           <div className="w-full px-4 pt-8">
             <div className="w-full max-w-md mb-6 mx-auto">

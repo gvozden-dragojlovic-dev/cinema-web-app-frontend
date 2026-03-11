@@ -26,10 +26,10 @@ const MovieDetailsModal = ({
         <div className="text-left space-y-2">
           <p className="leading-relaxed">{movie.overview}</p>
           <p className="font-semibold">
-            <span>Release Date</span> {movie.release_date || "N/A"}
+            <span>Release Date:</span> {movie.release_date || "N/A"}
           </p>
           <p className="font-semibold">
-            <span>Rating</span> {movie.vote_average || "N/A"}
+            <span>Rating:</span> {movie.vote_average || "N/A"}
           </p>
           <p>
             <span>Genres:</span>{" "}
