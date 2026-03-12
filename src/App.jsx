@@ -13,6 +13,8 @@ import Register from "./components/Register";
 import Account from "./components/Account";
 import ChangePassword from "./components/ChangePassword";
 import Home from "./components/Home";
+import BuyTicket from "./pages/BuyTicket";
+import History from "./pages/History";
 import backgroundMain from "./assets/background-main.png";
 import cinemaLogin from "./assets/cinema_login_3.png";
 
@@ -37,7 +39,7 @@ function AppContent() {
   });
   const [view, setView] = useState(() => {
     const pathView = location.pathname.replace("/", "") || "home";
-    return ["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password"].includes(pathView) ? pathView : "home";
+    return ["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password", "buy-ticket", "history"].includes(pathView) ? pathView : "home";
   });
 
   const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -71,7 +73,7 @@ function AppContent() {
       return;
     }
     const pathView = path.replace("/", "");
-    if (["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password"].includes(pathView)) {
+    if (["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password", "buy-ticket", "history"].includes(pathView)) {
       setView(pathView);
     }
   }, [location.pathname, navigate]);
@@ -246,7 +248,7 @@ function AppContent() {
         className="grow w-full flex flex-col items-center text-center"
         style={{
           backgroundImage:
-            view === "login" || view === "register" || view === "account" || view === "change-password"
+            view === "login" || view === "register" || view === "account" || view === "change-password" || view === "buy-ticket" || view === "history"
               ? `url(${cinemaLogin})`
               : `url(${backgroundMain})`,
           backgroundSize: "cover",
@@ -278,8 +280,20 @@ function AppContent() {
           </div>
         )}
 
+        {view === "buy-ticket" && (
+          <div className="w-full flex items-center justify-center px-4 py-8">
+            <BuyTicket />
+          </div>
+        )}
+
+        {view === "history" && (
+          <div className="w-full flex items-center justify-center px-4 py-8">
+            <History />
+          </div>
+        )}
+
         {view === "home" && <Home />}
-        {view !== "login" && view !== "register" && view !== "home" && view !== "account" && view !== "change-password" && (
+        {view !== "login" && view !== "register" && view !== "home" && view !== "account" && view !== "change-password" && view !== "buy-ticket" && view !== "history" && (
           <div className="w-full px-4 pt-8">
             <div className="w-full max-w-md mb-6 mx-auto">
               <SearchBar onSearch={handleSearch} searchTerm={searchTerm} />
@@ -358,6 +372,8 @@ export default function App() {
         <Route path="/register" element={<AppContent />} />
         <Route path="/account" element={<AppContent />} />
         <Route path="/change-password" element={<AppContent />} />
+        <Route path="/buy-ticket" element={<AppContent />} />
+        <Route path="/history" element={<AppContent />} />
       </Routes>
     </BrowserRouter>
   );
