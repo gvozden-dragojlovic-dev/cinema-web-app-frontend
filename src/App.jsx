@@ -98,7 +98,7 @@ function AppContent() {
   }, [favorites, view, favoritesPage, totalFavoritesPages, searchTerm]);
 
   useEffect(() => {
-    if (view === "favorites" || view === "home" || view === "login" || view === "register") {
+    if (["favorites", "home", "login", "register", "account", "change-password", "buy-ticket", "history"].includes(view)) {
       setMovies([]);
       setError(null);
       setLoading(false);
@@ -113,52 +113,67 @@ function AppContent() {
       setError(null);
       setMovies([]);
 
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+      const maxDate = new Date();
+      maxDate.setDate(maxDate.getDate() + 30);
+      const maxDateStr = maxDate.toISOString().split('T')[0];
+
       try {
-        let url;
-        if (searchTerm) {
-          url = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(
-            searchTerm
-          )}&page=${page}`;
-        } else if (view === "popular") {
-          url = `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&page=${page}`;
-        } else if (view === "coming-soon") {
-          const tomorrow = new Date();
-          tomorrow.setDate(tomorrow.getDate() + 1);
-          const tomorrowStr = tomorrow.toISOString().split('T')[0];
-          const maxDate = new Date();
-          maxDate.setDate(maxDate.getDate() + 30);
-          const maxDateStr = maxDate.toISOString().split('T')[0];
-          url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&primary_release_date.gte=${tomorrowStr}&primary_release_date.lte=${maxDateStr}&sort_by=primary_release_date.asc&page=${page}`;
-        } else if (view === "toprated") {
-          url = `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`;
-        }
-        const response = await fetch(url, { signal: abortController.signal });
-        if (!response.ok) {
-          throw new Error("Failed to fetch movies.");
-        }
-        const data = await response.json();
-        if (isMounted) {
-          console.log(data);
-          setMovies(data.results);
-          setTotalPages(Math.min(data.total_pages || 0, 500));
+        if (view === "coming-soon" && searchTerm) {
+          const firstRes = await fetch(
+            `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(searchTerm)}&page=1`,
+            { signal: abortController.signal }
+          );
+          if (!firstRes.ok) throw new Error();
+          const firstData = await firstRes.json();
+          
+          const pagesToFetch = Math.min(firstData.total_pages, 10);
+          let allResults = [...firstData.results];
+          
+          if (pagesToFetch > 1) {
+            const promises = Array.from({ length: pagesToFetch - 1 }, (_, i) =>
+              fetch(`https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(searchTerm)}&page=${i + 2}`, { signal: abortController.signal }).then(r => r.json())
+            );
+            const pages = await Promise.all(promises);
+            pages.forEach(p => p.results && allResults.push(...p.results));
+          }
+          
+          const filtered = allResults.filter(m => m.release_date && m.release_date >= tomorrowStr && m.release_date <= maxDateStr);
+          if (isMounted) {
+            const start = (page - 1) * 20;
+            setMovies(filtered.slice(start, start + 20));
+            setTotalPages(Math.ceil(filtered.length / 20));
+          }
+        } else {
+          let url;
+          if (searchTerm) {
+            url = `https://api.themoviedb.org/3/search/movie?api_key=${API_KEY}&query=${encodeURIComponent(searchTerm)}&page=${page}`;
+          } else if (view === "coming-soon") {
+            url = `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&primary_release_date.gte=${tomorrowStr}&primary_release_date.lte=${maxDateStr}&sort_by=primary_release_date.asc&page=${page}`;
+          } else if (view === "popular") {
+            url = `https://api.themoviedb.org/3/movie/popular?api_key=${API_KEY}&page=${page}`;
+          } else if (view === "toprated") {
+            url = `https://api.themoviedb.org/3/movie/top_rated?api_key=${API_KEY}&page=${page}`;
+          }
+          const response = await fetch(url, { signal: abortController.signal });
+          if (!response.ok) throw new Error();
+          const data = await response.json();
+          if (isMounted) {
+            setMovies(data.results);
+            setTotalPages(Math.min(data.total_pages || 0, 500));
+          }
         }
       } catch (err) {
-        if (isMounted && err.name !== "AbortError") {
-          setError("Failed to fetch movies.");
-        }
+        if (isMounted && err.name !== "AbortError") setError("Failed to fetch movies.");
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchMovies();
-
-    return () => {
-      isMounted = false;
-      abortController.abort();
-    };
+    return () => { isMounted = false; abortController.abort(); };
   }, [searchTerm, page, view, API_KEY]);
 
   const handleSearch = (term) => {
@@ -296,7 +311,7 @@ function AppContent() {
         {view !== "login" && view !== "register" && view !== "home" && view !== "account" && view !== "change-password" && view !== "buy-ticket" && view !== "history" && (
           <div className="w-full px-4 pt-8">
             <div className="w-full max-w-md mb-6 mx-auto">
-              <SearchBar onSearch={handleSearch} searchTerm={searchTerm} />
+              <SearchBar onSearch={handleSearch} searchTerm={searchTerm} placeholder={view === "favorites" ? "Search favorite movies..." : view === "coming-soon" ? "Search upcoming movies..." : "Search thousand of movies..."} />
             </div>
             {loading && <Spinner />}
             {error && <ErrorMessage message={error} />}

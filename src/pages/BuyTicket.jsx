@@ -7,6 +7,8 @@ export default function BuyTicket() {
   const [viewers, setViewers] = useState([]);
 
   const [tickets, setTickets] = useState([]);
+  const [message, setMessage] = useState({ text: "", type: "" });
+  const [ticketMessage, setTicketMessage] = useState({ text: "", type: "" });
 
   const [selectedViewer, setSelectedViewer] = useState("");
   const [selectedSeat, setSelectedSeat] = useState("");
@@ -71,6 +73,7 @@ export default function BuyTicket() {
   };
 
   const handleAddTicket = () => {
+    setMessage({ text: "", type: "" });
 
     if (!selectedViewer || !selectedSeat) return;
 
@@ -81,12 +84,12 @@ export default function BuyTicket() {
     const seatExists = tickets.some(t => t.seat === selectedSeat);
 
     if (viewerExists) {
-      alert("Viewer already has a ticket");
+      setTicketMessage({ text: "Viewer already has a ticket", type: "error" });
       return;
     }
 
     if (seatExists) {
-      alert("Seat already selected");
+      setTicketMessage({ text: "Seat already selected", type: "error" });
       return;
     }
 
@@ -105,6 +108,7 @@ export default function BuyTicket() {
 
     setSelectedViewer("");
     setSelectedSeat("");
+    setTicketMessage({ text: "", type: "" });
   };
 
   const handleDeleteTicket = () => {
@@ -112,21 +116,22 @@ export default function BuyTicket() {
   };
 
   const handleBuyTickets = async () => {
+    setTicketMessage({ text: "", type: "" });
 
     if (!formData.movieId || !formData.hallId || !formData.price || !formData.dateTime) {
-      alert("Fill projection information");
+      setMessage({ text: "Fill projection information", type: "error" });
       return;
     }
 
     if (tickets.length === 0) {
-      alert("Add at least one ticket");
+      setMessage({ text: "Add at least one ticket", type: "error" });
       return;
     }
 
     const adminId = localStorage.getItem("adminId");
 
     if (!adminId) {
-      alert("You must be logged in to buy tickets");
+      setMessage({ text: "You must be logged in to buy tickets", type: "error" });
       return;
     }
 
@@ -160,9 +165,10 @@ export default function BuyTicket() {
         throw new Error();
       }
 
-      const message = await response.text();
+      const msg = await response.text();
 
-      alert(message);
+      setMessage({ text: msg || "Purchase successful!", type: "success" });
+      setTicketMessage({ text: "", type: "" });
 
       setTickets([]);
 
@@ -177,7 +183,7 @@ export default function BuyTicket() {
     } catch (error) {
 
       console.error(error);
-      alert("Ticket purchase failed");
+      setMessage({ text: "Ticket purchase failed", type: "error" });
 
     }
 
@@ -335,6 +341,12 @@ export default function BuyTicket() {
           </div>
         </div>
 
+        {ticketMessage.text && (
+          <p className={`text-sm mt-2 ${ticketMessage.type === "error" ? "text-red-500" : "text-green-500"}`}>
+            {ticketMessage.text}
+          </p>
+        )}
+
         <div className="flex gap-4 mt-4">
           <button
             onClick={handleAddTicket}
@@ -371,9 +383,15 @@ export default function BuyTicket() {
         </table>
       </div>
 
+      {message.text && (
+        <p className={`text-center mt-6 font-semibold ${message.type === "error" ? "text-red-500" : "text-green-500"}`}>
+          {message.text}
+        </p>
+      )}
+
       <button
         onClick={handleBuyTickets}
-        className="w-full mt-8 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 cursor-pointer text-lg"
+        className="w-full mt-4 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 cursor-pointer text-lg"
       >
         Buy Ticket/s
       </button>
