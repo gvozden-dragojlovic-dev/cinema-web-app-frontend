@@ -1,4 +1,3 @@
-import React from "react";
 import noMovie from "../assets/no-movie.png";
 
 const MovieCard = ({ movie, onToggleFavorite, isFavorite, onViewDetails }) => {

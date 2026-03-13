@@ -1,5 +1,3 @@
-import React from "react";
-
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const range = 3;
   const start = Math.max(1, currentPage - range);
