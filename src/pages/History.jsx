@@ -4,6 +4,7 @@ export default function History() {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [openIndex, setOpenIndex] = useState(null);
 
   useEffect(() => {
     fetchHistory();
@@ -28,7 +29,16 @@ export default function History() {
       }
 
       const data = await response.json();
-      setPurchases(Array.isArray(data) ? data : []);
+
+      const filteredData = Array.isArray(data)
+        ? data.filter(
+            (purchase) =>
+              Array.isArray(purchase.tickets) &&
+              purchase.tickets.length > 0
+          )
+        : [];
+
+      setPurchases(filteredData);
     } catch (err) {
       console.error(err);
       setError("Failed to load purchase history");
@@ -45,8 +55,12 @@ export default function History() {
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
+  };
+
+  const toggleOpen = (index) => {
+    setOpenIndex(openIndex === index ? null : index);
   };
 
   if (loading) {
@@ -80,84 +94,110 @@ export default function History() {
       {purchases.length === 0 ? (
         <p className="text-gray-400 text-center">No purchases found</p>
       ) : (
-        <div className="space-y-6">
-          {purchases.map((purchase, index) => (
-            <div
-              key={index}
-              className="bg-gray-800 bg-opacity-50 rounded-lg p-6 border border-gray-700"
-            >
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
-                    Movie
-                  </label>
-                  <p className="text-white">{purchase.movieTitle || "-"}</p>
+        <div className="space-y-4">
+          {purchases.map((purchase, index) => {
+            const ticketCount = Array.isArray(purchase.tickets)
+              ? purchase.tickets.length
+              : 0;
+
+            const total = purchase.price * ticketCount;
+
+            return (
+              <div
+                key={index}
+                className="bg-gray-800 bg-opacity-60 rounded-lg border border-gray-700 overflow-hidden"
+              >
+                <div
+                  onClick={() => toggleOpen(index)}
+                  className="cursor-pointer p-4 flex justify-between items-center hover:bg-gray-700 transition"
+                >
+                  <div>
+                    <p className="text-white font-semibold">
+                      {purchase.movieTitle}
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                      {formatDateTime(purchase.dateTime)} | {purchase.hallName}
+                    </p>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-purple-400 font-semibold">
+                      {total.toFixed(2)} RSD
+                    </p>
+                    <p className="text-gray-400 text-sm">
+                      {ticketCount} ticket(s)
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
-                    Hall
-                  </label>
-                  <p className="text-white">{purchase.hallName || "-"}</p>
-                </div>
+                {openIndex === index && (
+                  <div className="p-6 border-t border-gray-700">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <label className="text-gray-400 text-sm">
+                          Projection Type
+                        </label>
+                        <p className="text-white">
+                          {purchase.projectionType || "-"}
+                        </p>
+                      </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
-                    Projection Type
-                  </label>
-                  <p className="text-white">{purchase.projectionType || "-"}</p>
-                </div>
+                      <div>
+                        <label className="text-gray-400 text-sm">
+                          Price per Ticket
+                        </label>
+                        <p className="text-white">
+                          {purchase.price
+                            ? `${purchase.price} RSD`
+                            : "-"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="text-gray-400 text-sm">Total</label>
+                        <p className="text-purple-400 font-semibold">
+                          {total.toFixed(2)} RSD
+                        </p>
+                      </div>
+                    </div>
+
+                    <table className="w-full text-left mt-4">
+                      <thead>
+                        <tr className="border-b border-gray-600">
+                          <th className="py-2 text-gray-400">#</th>
+                          <th className="py-2 text-gray-400">Viewer</th>
+                          <th className="py-2 text-gray-400">Email</th>
+                          <th className="py-2 text-gray-400">Seat</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {purchase.tickets.map((ticket, i) => (
+                          <tr
+                            key={i}
+                            className="border-b border-gray-700"
+                          >
+                            <td className="py-2 text-gray-300">
+                              {i + 1}
+                            </td>
+                            <td className="py-2 text-white">
+                              {ticket.viewerFirstName}{" "}
+                              {ticket.viewerLastName}
+                            </td>
+                            <td className="py-2 text-white">
+                              {ticket.viewerEmail}
+                            </td>
+                            <td className="py-2 text-white">
+                              {ticket.seat}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
-                    Price per Ticket
-                  </label>
-                  <p className="text-white">{purchase.price ? `${purchase.price} RSD` : "-"}</p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-400 mb-1">
-                    Projection Date & Time
-                  </label>
-                  <p className="text-white">{formatDateTime(purchase.dateTime)}</p>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">
-                  Tickets ({purchase.tickets?.length || 0})
-                </label>
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-gray-600">
-                      <th className="py-2 text-gray-400 font-medium">Viewer</th>
-                      <th className="py-2 text-gray-400 font-medium">Email</th>
-                      <th className="py-2 text-gray-400 font-medium">Seat</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchase.tickets?.map((ticket, ticketIndex) => (
-                      <tr key={ticketIndex} className="border-b border-gray-700">
-                        <td className="py-2 text-white">
-                          {ticket.viewerFirstName} {ticket.viewerLastName}
-                        </td>
-                        <td className="py-2 text-white">{ticket.viewerEmail}</td>
-                        <td className="py-2 text-white">{ticket.seat}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="mt-4 pt-4 border-t border-gray-700">
-                <span className="text-gray-400 text-sm">
-                  Total: {(purchase.price * (purchase.tickets?.length || 0)).toFixed(2)} RSD
-                </span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

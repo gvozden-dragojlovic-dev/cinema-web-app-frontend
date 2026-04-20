@@ -6,19 +6,24 @@ export default function BuyTicket() {
   const [halls, setHalls] = useState([]);
   const [viewers, setViewers] = useState([]);
 
+  const [screenings, setScreenings] = useState([]);
+  const [selectedScreening, setSelectedScreening] = useState("");
+
   const [tickets, setTickets] = useState([]);
+  const [selectedTicketIndex, setSelectedTicketIndex] = useState(null);
+
   const [message, setMessage] = useState({ text: "", type: "" });
   const [ticketMessage, setTicketMessage] = useState({ text: "", type: "" });
+  const [screeningError, setScreeningError] = useState("");
 
   const [selectedViewer, setSelectedViewer] = useState("");
   const [selectedSeat, setSelectedSeat] = useState("");
 
+  const [occupiedSeats, setOccupiedSeats] = useState([]);
+
   const [formData, setFormData] = useState({
     movieId: "",
-    hallId: "",
-    price: "",
-    projectionType: "2D",
-    dateTime: ""
+    hallId: ""
   });
 
   useEffect(() => {
@@ -27,17 +32,29 @@ export default function BuyTicket() {
     fetchViewers();
   }, []);
 
+  useEffect(() => {
+    if (formData.movieId && formData.hallId) {
+      fetchScreenings();
+    } else {
+      setScreenings([]);
+      setSelectedScreening("");
+    }
+  }, [formData.movieId, formData.hallId]);
+
+  useEffect(() => {
+    if (selectedScreening) {
+      fetchOccupiedSeats();
+    } else {
+      setOccupiedSeats([]);
+    }
+  }, [selectedScreening]);
+
   const fetchMovies = async () => {
     try {
       const res = await fetch("http://localhost:8080/api/cinema/movies");
-
-      if (!res.ok) throw new Error();
-
       const data = await res.json();
-
       setMovies(Array.isArray(data) ? data : []);
-
-    } catch (err) {
+    } catch {
       console.error("Movies loading failed");
     }
   };
@@ -45,14 +62,9 @@ export default function BuyTicket() {
   const fetchHalls = async () => {
     try {
       const res = await fetch("http://localhost:8080/api/cinema/halls");
-
-      if (!res.ok) throw new Error();
-
       const data = await res.json();
-
       setHalls(Array.isArray(data) ? data : []);
-
-    } catch (err) {
+    } catch {
       console.error("Halls loading failed");
     }
   };
@@ -60,66 +72,92 @@ export default function BuyTicket() {
   const fetchViewers = async () => {
     try {
       const res = await fetch("http://localhost:8080/api/cinema/viewers");
-
-      if (!res.ok) throw new Error();
-
       const data = await res.json();
-
       setViewers(Array.isArray(data) ? data : []);
-
-    } catch (err) {
+    } catch {
       console.error("Viewers loading failed");
     }
   };
 
+  const fetchScreenings = async () => {
+    try {
+      const adminId = localStorage.getItem("adminId");
+
+      const res = await fetch(
+        `http://localhost:8080/api/cinema/screenings?movieId=${formData.movieId}&hallId=${formData.hallId}&adminId=${adminId}`
+      );
+
+      const data = await res.json();
+
+      if (!data || data.length === 0) {
+        setScreenings([]);
+        setScreeningError("No projections for selected movie and hall");
+        return;
+      }
+
+      setScreenings(data);
+      setScreeningError("");
+
+    } catch (err) {
+      console.error(err);
+      setScreeningError("Failed to load projections");
+    }
+  };
+
+  const fetchOccupiedSeats = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:8080/api/cinema/occupied-seats/${selectedScreening}`
+      );
+
+      const data = await res.json();
+      setOccupiedSeats(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load occupied seats");
+    }
+  };
+
   const handleAddTicket = () => {
-    setMessage({ text: "", type: "" });
+    setTicketMessage({ text: "", type: "" });
 
     if (!selectedViewer || !selectedSeat) return;
 
     const viewerId = Number(selectedViewer);
 
-    const viewerExists = tickets.some(t => t.viewerId === viewerId);
-
-    const seatExists = tickets.some(t => t.seat === selectedSeat);
-
-    if (viewerExists) {
-      setTicketMessage({ text: "Viewer already has a ticket", type: "error" });
-      return;
-    }
-
-    if (seatExists) {
+    if (tickets.some(t => t.seat === selectedSeat)) {
       setTicketMessage({ text: "Seat already selected", type: "error" });
       return;
     }
 
     const viewer = viewers.find(v => v.id === viewerId);
-
     if (!viewer) return;
 
-    const newTicket = {
-      viewerId: viewer.id,
-      viewerName: viewer.firstName + " " + viewer.lastName,
-      email: viewer.email,
-      seat: selectedSeat
-    };
-
-    setTickets([...tickets, newTicket]);
+    setTickets([
+      ...tickets,
+      {
+        viewerId: viewer.id,
+        viewerName: viewer.firstName + " " + viewer.lastName,
+        email: viewer.email,
+        seat: selectedSeat
+      }
+    ]);
 
     setSelectedViewer("");
     setSelectedSeat("");
-    setTicketMessage({ text: "", type: "" });
   };
 
   const handleDeleteTicket = () => {
-    setTickets(tickets.slice(0, -1));
+    if (selectedTicketIndex === null) return;
+
+    setTickets(tickets.filter((_, i) => i !== selectedTicketIndex));
+    setSelectedTicketIndex(null);
   };
 
   const handleBuyTickets = async () => {
-    setTicketMessage({ text: "", type: "" });
+    setMessage({ text: "", type: "" });
 
-    if (!formData.movieId || !formData.hallId || !formData.price || !formData.dateTime) {
-      setMessage({ text: "Fill projection information", type: "error" });
+    if (!selectedScreening) {
+      setMessage({ text: "Select projection", type: "error" });
       return;
     }
 
@@ -131,270 +169,209 @@ export default function BuyTicket() {
     const adminId = localStorage.getItem("adminId");
 
     if (!adminId) {
-      setMessage({ text: "You must be logged in to buy tickets", type: "error" });
+      setMessage({ text: "You must be logged in", type: "error" });
       return;
     }
 
     try {
-
       const payload = {
         adminId: Number(adminId),
-        movieId: Number(formData.movieId),
-        hallId: Number(formData.hallId),
-        projectionType: formData.projectionType,
-        price: Number(formData.price),
-        dateTime: formData.dateTime,
+        screeningId: Number(selectedScreening),
         tickets: tickets.map(t => ({
           viewerId: t.viewerId,
           seat: t.seat
         }))
       };
 
-      const response = await fetch(
-        "http://localhost:8080/api/cinema/buy",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error();
-      }
-
-      const msg = await response.text();
-
-      setMessage({ text: msg || "Purchase successful!", type: "success" });
-      setTicketMessage({ text: "", type: "" });
-
-      setTickets([]);
-
-      setFormData({
-        movieId: "",
-        hallId: "",
-        price: "",
-        projectionType: "2D",
-        dateTime: ""
+      const res = await fetch("http://localhost:8080/api/cinema/buy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
       });
 
-    } catch (error) {
+      if (!res.ok) throw new Error();
 
-      console.error(error);
+      const msg = await res.text();
+
+      setMessage({ text: msg || "Purchase successful!", type: "success" });
+
+      setTickets([]);
+      setSelectedScreening("");
+      setSelectedTicketIndex(null);
+      setOccupiedSeats([]);
+
+    } catch (err) {
+      console.error(err);
       setMessage({ text: "Ticket purchase failed", type: "error" });
-
     }
-
   };
 
   const seats = [];
-
-  for (let row of ["A","B","C","D","E","F","G"]) {
-    for (let col = 1; col <= 7; col++) {
-      seats.push(row + col);
+  for (let r of ["A", "B", "C", "D", "E", "F", "G"]) {
+    for (let c = 1; c <= 7; c++) {
+      seats.push(r + c);
     }
   }
 
+  const availableSeats = seats.filter(
+    s => !occupiedSeats.includes(s) && !tickets.some(t => t.seat === s)
+  );
+
   return (
     <div className="bg-gray-900 bg-opacity-80 rounded-lg p-8 max-w-4xl w-full mx-auto">
+
       <h2 className="text-3xl font-bold text-white mb-8 text-center">
         Buy Ticket
       </h2>
 
-      <div className="mb-8">
-        <h3 className="text-xl font-semibold text-white mb-4">
-          Projection
-        </h3>
+      <div className="mb-6">
+        <h3 className="text-xl text-white mb-3">Projection</h3>
 
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Movie
-            </label>
-            <select
-              className="w-full px-4 py-2 bg-gray-800 bg-opacity-50 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-purple-500"
-              value={formData.movieId}
-              onChange={e =>
-                setFormData({ ...formData, movieId: e.target.value })
-              }
-            >
-              <option value="">Select movie</option>
-              {movies.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.title}
-                </option>
-              ))}
-            </select>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Hall
-            </label>
-            <select
-              className="w-full px-4 py-2 bg-gray-800 bg-opacity-50 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-purple-500"
-              value={formData.hallId}
-              onChange={e =>
-                setFormData({ ...formData, hallId: e.target.value })
-              }
-            >
-              <option value="">Select hall</option>
-              {halls.map(h => (
-                <option key={h.id} value={h.id}>
-                  {h.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={formData.movieId}
+            onChange={e => setFormData({ ...formData, movieId: e.target.value })}
+            className="p-2 bg-gray-800 text-white rounded"
+          >
+            <option value="">Select movie</option>
+            {movies.map(m => (
+              <option key={m.id} value={m.id}>{m.title}</option>
+            ))}
+          </select>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Ticket Price
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              placeholder="Enter price"
-              className="w-full px-4 py-2 bg-gray-800 bg-opacity-50 text-white placeholder-gray-400 border border-gray-600 rounded-lg focus:outline-none focus:border-purple-500"
-              value={formData.price}
-              onChange={e =>
-                setFormData({ ...formData, price: e.target.value })
-              }
-            />
-          </div>
+          <select
+            value={formData.hallId}
+            onChange={e => setFormData({ ...formData, hallId: e.target.value })}
+            className="p-2 bg-gray-800 text-white rounded"
+          >
+            <option value="">Select hall</option>
+            {halls.map(h => (
+              <option key={h.id} value={h.id}>{h.name}</option>
+            ))}
+          </select>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Projection Type
-            </label>
-            <select
-              className="w-full px-4 py-2 bg-gray-800 bg-opacity-50 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-purple-500"
-              value={formData.projectionType}
-              onChange={e =>
-                setFormData({ ...formData, projectionType: e.target.value })
-              }
-            >
-              <option>2D</option>
-              <option>3D</option>
-              <option>IMAX</option>
-            </select>
-          </div>
-
-          <div className="col-span-2">
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Date & Time
-            </label>
-            <input
-              type="datetime-local"
-              className="w-full px-4 py-2 bg-gray-800 bg-opacity-50 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-purple-500"
-              value={formData.dateTime}
-              onChange={e =>
-                setFormData({ ...formData, dateTime: e.target.value })
-              }
-            />
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xl font-semibold text-white mb-4">
-          Tickets
-        </h3>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Viewer
-            </label>
-            <select
-              className="w-full px-4 py-2 bg-gray-800 bg-opacity-50 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-purple-500"
-              value={selectedViewer}
-              onChange={e => setSelectedViewer(e.target.value)}
-            >
-              <option value="">Select viewer</option>
-              {viewers.map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.firstName} {v.lastName} - {v.email}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-400 mb-2">
-              Seat
-            </label>
-            <select
-              className="w-full px-4 py-2 bg-gray-800 bg-opacity-50 text-white border border-gray-600 rounded-lg focus:outline-none focus:border-purple-500"
-              value={selectedSeat}
-              onChange={e => setSelectedSeat(e.target.value)}
-            >
-              <option value="">Select seat</option>
-              {seats.map(seat => (
-                <option key={seat} value={seat}>
-                  {seat}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
 
-        {ticketMessage.text && (
-          <p className={`text-sm mt-2 ${ticketMessage.type === "error" ? "text-red-500" : "text-green-500"}`}>
-            {ticketMessage.text}
+        {screeningError && (
+          <p className="text-red-500 mt-2">{screeningError}</p>
+        )}
+
+        {selectedScreening && availableSeats.length === 0 && (
+          <p className="text-red-500 mt-2">
+            All seats are occupied for this projection
           </p>
         )}
 
-        <div className="flex gap-4 mt-4">
+        {screenings.length > 0 && (
+          <select
+            value={selectedScreening}
+            onChange={e => setSelectedScreening(e.target.value)}
+            className="w-full mt-3 p-2 bg-gray-800 text-white rounded"
+          >
+            <option value="">Select projection</option>
+            {screenings.map(s => (
+              <option key={s.id} value={s.id}>
+                {new Date(s.dateTime).toLocaleString()} | {s.projectionType} | {s.ticketPrice}$
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+
+      <div>
+
+        <h3 className="text-xl text-white mb-3">Tickets</h3>
+
+        <div className="grid grid-cols-2 gap-4">
+
+          <select
+            value={selectedViewer}
+            onChange={e => setSelectedViewer(e.target.value)}
+            className="p-2 bg-gray-800 text-white rounded"
+          >
+            <option value="">Viewer</option>
+            {viewers.map(v => (
+              <option key={v.id} value={v.id}>
+                {v.firstName} {v.lastName}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedSeat}
+            onChange={e => setSelectedSeat(e.target.value)}
+            className="p-2 bg-gray-800 text-white rounded"
+          >
+            <option value="">Seat</option>
+            {availableSeats.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+
+        </div>
+
+        {ticketMessage.text && (
+          <p className="text-red-500 mt-2">{ticketMessage.text}</p>
+        )}
+
+        <div className="flex gap-3 mt-3">
           <button
             onClick={handleAddTicket}
-            className="btn btn-primary"
+            className="bg-blue-600 px-4 py-2 text-white rounded cursor-pointer"
           >
-            Add Ticket
+            Add
           </button>
 
           <button
             onClick={handleDeleteTicket}
-            className="btn bg-red-700 hover:bg-red-800 text-white border-none"
+            disabled={selectedTicketIndex === null}
+            className={`bg-red-600 px-4 py-2 text-white rounded cursor-pointer ${
+              selectedTicketIndex === null ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            Delete Ticket
+            Delete
           </button>
         </div>
 
-        <table className="w-full mt-6 text-left">
+        <table className="w-full mt-4 text-white">
           <thead>
             <tr className="border-b border-gray-600">
-              <th className="py-2 text-gray-400 font-medium">Viewer</th>
-              <th className="py-2 text-gray-400 font-medium">Email</th>
-              <th className="py-2 text-gray-400 font-medium">Seat</th>
+              <th>Viewer</th>
+              <th>Email</th>
+              <th>Seat</th>
             </tr>
           </thead>
           <tbody>
             {tickets.map((t, i) => (
-              <tr key={i} className="border-b border-gray-700">
-                <td className="py-2 text-white">{t.viewerName}</td>
-                <td className="py-2 text-white">{t.email}</td>
-                <td className="py-2 text-white">{t.seat}</td>
+              <tr
+                key={i}
+                onClick={() => setSelectedTicketIndex(i)}
+                className={`cursor-pointer ${selectedTicketIndex === i ? "bg-gray-700" : ""}`}
+              >
+                <td>{t.viewerName}</td>
+                <td>{t.email}</td>
+                <td>{t.seat}</td>
               </tr>
             ))}
           </tbody>
         </table>
+
       </div>
 
       {message.text && (
-        <p className={`text-center mt-6 font-semibold ${message.type === "error" ? "text-red-500" : "text-green-500"}`}>
+        <p className={`mt-4 text-center ${message.type === "error" ? "text-red-500" : "text-green-500"}`}>
           {message.text}
         </p>
       )}
 
       <button
         onClick={handleBuyTickets}
-        className="w-full mt-4 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 cursor-pointer text-lg"
+        className="w-full mt-4 bg-purple-600 text-white py-3 rounded cursor-pointer"
       >
         Buy Ticket/s
       </button>
+
     </div>
   );
 }
