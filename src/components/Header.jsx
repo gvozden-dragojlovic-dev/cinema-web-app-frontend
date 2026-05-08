@@ -151,7 +151,7 @@ export default function Header({
                     <button
                       onClick={() => {
                         setShowUserMenu(false);
-                        onLogout();
+                        setView("logout");
                       }}
                       className="w-full text-left px-4 py-2 text-red-400 hover:bg-gray-700 hover:text-red-300 transition cursor-pointer"
                     >

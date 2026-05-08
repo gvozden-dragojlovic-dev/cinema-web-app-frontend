@@ -9,6 +9,7 @@ import Pagination from "./components/Pagination";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Login from "./pages/Login";
+import Logout from "./pages/Logout";
 import Register from "./pages/Register";
 import Account from "./pages/Account";
 import ChangePassword from "./pages/ChangePassword";
@@ -39,7 +40,7 @@ function AppContent() {
   });
   const [view, setView] = useState(() => {
     const pathView = location.pathname.replace("/", "") || "home";
-    return ["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password", "buy-ticket", "history"].includes(pathView) ? pathView : "home";
+    return ["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password", "buy-ticket", "history", "logout"].includes(pathView) ? pathView : "home";
   });
 
   const API_KEY = import.meta.env.VITE_TMDB_API_KEY;
@@ -73,7 +74,7 @@ function AppContent() {
       return;
     }
     const pathView = path.replace("/", "");
-    if (["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password", "buy-ticket", "history"].includes(pathView)) {
+    if (["home", "popular", "coming-soon", "toprated", "favorites", "login", "register", "account", "change-password", "buy-ticket", "history", "logout"].includes(pathView)) {
       setView(pathView);
     }
   }, [location.pathname, navigate]);
@@ -98,7 +99,7 @@ function AppContent() {
   }, [favorites, view, favoritesPage, totalFavoritesPages, searchTerm]);
 
   useEffect(() => {
-    if (["favorites", "home", "login", "register", "account", "change-password", "buy-ticket", "history"].includes(view)) {
+    if (["favorites", "home", "login", "register", "account", "change-password", "buy-ticket", "history", "logout"].includes(view)) {
       setMovies([]);
       setError(null);
       setLoading(false);
@@ -238,15 +239,6 @@ function AppContent() {
     navigate("/home");
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserEmail("");
-    localStorage.removeItem("isLoggedIn");
-    localStorage.removeItem("userEmail");
-    setView("home");
-    navigate("/home");
-  };
-
   return (
     <div className="flex flex-col min-h-screen">
       <Header
@@ -257,13 +249,13 @@ function AppContent() {
         setPage={setPage}
         isLoggedIn={isLoggedIn}
         userEmail={userEmail}
-        onLogout={handleLogout}
+        onLogout={() => handleViewChange("logout")}
       />
       <main
         className="grow w-full flex flex-col items-center text-center"
         style={{
           backgroundImage:
-            view === "login" || view === "register" || view === "account" || view === "change-password" || view === "buy-ticket" || view === "history"
+            view === "login" || view === "register" || view === "account" || view === "change-password" || view === "buy-ticket" || view === "history" || view === "logout"
               ? `url(${cinemaLogin})`
               : `url(${backgroundMain})`,
           backgroundSize: "cover",
@@ -307,8 +299,23 @@ function AppContent() {
           </div>
         )}
 
+        {view === "logout" && (
+          <div className="w-full flex items-center justify-center px-4 py-8">
+            <Logout
+              setView={handleViewChange}
+              onLogoutSuccess={() => {
+                setIsLoggedIn(false);
+                setUserEmail("");
+
+                localStorage.removeItem("isLoggedIn");
+                localStorage.removeItem("userEmail");
+              }}
+            />
+          </div>
+        )}
+
         {view === "home" && <Home />}
-        {view !== "login" && view !== "register" && view !== "home" && view !== "account" && view !== "change-password" && view !== "buy-ticket" && view !== "history" && (
+        {view !== "login" && view !== "register" && view !== "home" && view !== "account" && view !== "change-password" && view !== "buy-ticket" && view !== "history" && view !== "logout" && (
           <div className="w-full px-4 pt-8">
             <div className="w-full max-w-md mb-6 mx-auto">
               <SearchBar onSearch={handleSearch} searchTerm={searchTerm} placeholder={view === "favorites" ? "Search favorite movies..." : view === "coming-soon" ? "Search upcoming movies..." : "Search thousand of movies..."} />
@@ -384,6 +391,7 @@ export default function App() {
         <Route path="/toprated" element={<AppContent />} />
         <Route path="/favorites" element={<AppContent />} />
         <Route path="/login" element={<AppContent />} />
+        <Route path="/logout" element={<AppContent />} />
         <Route path="/register" element={<AppContent />} />
         <Route path="/account" element={<AppContent />} />
         <Route path="/change-password" element={<AppContent />} />

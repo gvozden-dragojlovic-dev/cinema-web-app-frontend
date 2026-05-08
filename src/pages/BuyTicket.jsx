@@ -272,7 +272,7 @@ export default function BuyTicket() {
             <option value="">Select projection</option>
             {screenings.map(s => (
               <option key={s.id} value={s.id}>
-                {new Date(s.dateTime).toLocaleString()} | {s.projectionType} | {s.ticketPrice}$
+                {new Date(s.dateTime).toLocaleString()} | {s.projectionType} | {s.ticketPrice} RSD
               </option>
             ))}
           </select>
@@ -318,7 +318,10 @@ export default function BuyTicket() {
         <div className="flex gap-3 mt-3">
           <button
             onClick={handleAddTicket}
-            className="bg-blue-600 px-4 py-2 text-white rounded cursor-pointer"
+            disabled={!selectedScreening}
+            className={`bg-blue-600 px-4 py-2 text-white rounded ${
+              !selectedScreening ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+            }`}
           >
             Add
           </button>
